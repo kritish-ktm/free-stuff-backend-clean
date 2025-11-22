@@ -28,6 +28,11 @@ app.get("/", (req, res) => {
   res.send("FREE STUFF BACKEND IS 100% ALIVE BRO!");
 });
 
+app.get("/api/test", (req, res) => {
+  console.log("TEST LOG - This should appear in Vercel logs");
+  res.json({ message: "If you see the console log, logging works" });
+});
+/*
 // ─────── POST ITEM ROUTE WITH BETTER DEBUGGING ───────
 app.post("/api/post-item", async (req, res) => {
   console.log("=== POST /api/post-item ===");
@@ -91,3 +96,5 @@ app.post("/api/post-item", async (req, res) => {
 
 // ─────── REQUIRED FOR VERCEL ───────
 module.exports = app;
+
+*/
