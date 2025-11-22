@@ -3,18 +3,13 @@ const cors = require("cors");
 const admin = require("firebase-admin");
 
 const app = express();
-const cors = require("cors");
 
-app.use(cors({
-  origin: [
-    "http://localhost:3000",           // for local testing
-    "https://free-stuff-nielsbrock.vercel.app",  // your future live frontend (add later)
-  ],
-  credentials: true
-}));
+// THIS LINE FIXES CORS ERROR
+app.use(cors({ origin: "*" }));
+
 app.use(express.json());
 
-// READ KEY FROM ENV (Railway/Vercel)
+// READ SECRET KEY FROM ENVIRONMENT (Vercel/Railway)
 const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY);
 
 admin.initializeApp({
@@ -23,6 +18,7 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
+// YOUR POST ITEM ENDPOINT
 app.post("/api/post-item", async (req, res) => {
   try {
     const data = req.body;
@@ -32,10 +28,12 @@ app.post("/api/post-item", async (req, res) => {
     });
     res.json({ success: true, id: docRef.id });
   } catch (error) {
-    console.error(error);
+    console.error("Error:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-const port = process.env.PORT || 4000;
-app.listen(port, () => console.log(`Backend live on port ${port}`));
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Backend running on port ${port}`);
+});
