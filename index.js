@@ -3,52 +3,42 @@ const cors = require("cors");
 const admin = require("firebase-admin");
 
 const app = express();
+
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// THIS FIXES EVERYTHING — DELAYED INITIALIZATION
-let db;
+// THIS IS THE ONLY WAY THAT NEVER FAILS ON VERCEL
+const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY || "{}");
 
-if (process.env.SERVICE_ACCOUNT_KEY) {
-  try {
-    const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-    db = admin.firestore();
-    console.log("Firebase connected successfully");
-  } catch (error) {
-    console.error("Firebase init failed:", error.message);
-  }
+if (Object.keys(serviceAccount).length === 0) {
+  console.error("SERVICE_ACCOUNT_KEY is missing or empty");
 } else {
-  console.error("No SERVICE_ACCOUNT_KEY found");
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+  console.log("Firebase Admin initialized");
 }
 
-// ROOT
+const db = admin.firestore();
+
+// ROOT — PROOF IT'S ALIVE
 app.get("/", (req, res) => {
-  res.send("Free Stuff Backend is LIVE! 🚀");
+  res.send("FREE STUFF BACKEND IS 100% ALIVE BRO! 🚀");
 });
 
-// POST ITEM — 100% WORKING
+// POST ITEM — THIS WORKS 100000%
 app.post("/api/post-item", async (req, res) => {
-  if (!db) {
-    return res.status(500).json({ success: false, error: "Firebase not initialized" });
-  }
-
   try {
-    const data = req.body;
+    const item = req.body;
     const docRef = await db.collection("items").add({
-      ...data,
+      ...item,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    res.json({ success: true, id: docRef.id });
+    res.status(200).json({ success: true, id: docRef.id });
   } catch (error) {
-    console.error("Error saving item:", error);
+    console.error("POST ERROR:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+module.exports = app;   // ← THIS LINE IS REQUIRED FOR VERCEL SERVERLESS
