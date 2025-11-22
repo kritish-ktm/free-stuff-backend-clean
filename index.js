@@ -1,13 +1,14 @@
 const express = require("express");
 const cors = require("cors");
 const admin = require("firebase-admin");
-const app = express();
 
+const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// ─────── SAFE FIREBASE INITIALIZATION (THIS FIXES THE 500) ───────
-let db = null;
+// Firebase initialization
+let db;
+
 if (process.env.SERVICE_ACCOUNT_KEY) {
   try {
     const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY);
@@ -15,36 +16,46 @@ if (process.env.SERVICE_ACCOUNT_KEY) {
       credential: admin.credential.cert(serviceAccount),
     });
     db = admin.firestore();
-    console.log("Firebase initialized successfully");
+    console.log("Firebase connected successfully");
   } catch (error) {
-    console.error("Firebase init error:", error.message);
+    console.error("Firebase init failed:", error.message);
   }
 } else {
-  console.error("Missing SERVICE_ACCOUNT_KEY");
+  console.error("No SERVICE_ACCOUNT_KEY found");
 }
 
-// ─────── ROOT ROUTE ───────
+// ROOT
 app.get("/", (req, res) => {
-  res.send("FREE STUFF BACKEND IS 100% ALIVE BRO!");
+  res.send("Free Stuff Backend is LIVE! 🚀");
 });
 
-// ─────── POST ITEM ROUTE ───────
+// TEST ENDPOINT
+app.get("/api/test", (req, res) => {
+  res.json({ 
+    success: true, 
+    message: "Test endpoint works",
+    dbReady: !!db 
+  });
+});
+
+// POST ITEM
 app.post("/api/post-item", async (req, res) => {
   if (!db) {
-    return res.status(500).json({ success: false, error: "Firebase not ready" });
+    return res.status(500).json({ success: false, error: "Firebase not initialized" });
   }
+
   try {
-    const item = req.body;
+    const data = req.body;
     const docRef = await db.collection("items").add({
-      ...item,
+      ...data,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     res.json({ success: true, id: docRef.id });
   } catch (error) {
-    console.error("Save error:", error);
+    console.error("Error saving item:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// ─────── THIS LINE IS REQUIRED FOR VERCEL ───────
+// Export for Vercel
 module.exports = app;
