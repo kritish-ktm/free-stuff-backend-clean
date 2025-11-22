@@ -34,19 +34,31 @@ app.post("/api/post-item", async (req, res) => {
   if (!db) {
     return res.status(500).json({ success: false, error: "Firebase not ready" });
   }
-
   try {
     const item = req.body;
+    console.log("Received item:", item); // Log what you're getting
+    
     const docRef = await db.collection("items").add({
-      ...item,
+      name: item.name,
+      price: item.price,
+      description: item.description,
+      category: item.category,
+      condition: item.condition,
+      location: item.location,
+      image: item.image,
+      postedBy: item.postedBy,
+      postedByName: item.postedByName,
+      postedByEmail: item.postedByEmail,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+    
     res.json({ success: true, id: docRef.id });
   } catch (error) {
-  console.error("Save error:", error);
+    console.error("Save error:", error); // This will show in Vercel logs
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 // ─────── THIS LINE IS REQUIRED FOR VERCEL ───────
 module.exports = app;
+
