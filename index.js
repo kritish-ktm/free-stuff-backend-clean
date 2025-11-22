@@ -1,86 +1,97 @@
 const express = require("express");
 const cors = require("cors");
 const admin = require("firebase-admin");
+
 const app = express();
 
 app.use(cors({ origin: "*" }));
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// ─────── SAFE FIREBASE INITIALIZATION ───────
+// ─────── FIREBASE INITIALIZATION ───────
 let db = null;
-if (process.env.SERVICE_ACCOUNT_KEY) {
-  try {
-    const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY);
+
+try {
+  if (!process.env.SERVICE_ACCOUNT_KEY) {
+    throw new Error("SERVICE_ACCOUNT_KEY not found");
+  }
+
+  const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY);
+  
+  if (!admin.apps.length) {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
-    db = admin.firestore();
-    console.log("Firebase initialized successfully");
-  } catch (error) {
-    console.error("Firebase init error:", error.message);
   }
-} else {
-  console.error("Missing SERVICE_ACCOUNT_KEY");
+  
+  db = admin.firestore();
+  console.log("✓ Firebase initialized");
+} catch (err) {
+  console.error("Firebase init failed:", err.message);
 }
 
-// ─────── ROOT ROUTE ───────
+// ─────── TEST ROUTE ───────
 app.get("/", (req, res) => {
-  res.send("FREE STUFF BACKEND IS 100% ALIVE BRO!");
+  res.json({ message: "Backend is alive" });
 });
-// ─────── POST ITEM ROUTE WITH BETTER DEBUGGING ───────
+
+app.get("/api/test", (req, res) => {
+  res.json({ 
+    success: true, 
+    message: "Test endpoint works",
+    dbReady: !!db 
+  });
+});
+
+// ─────── POST ITEM ROUTE ───────
 app.post("/api/post-item", async (req, res) => {
-  console.log("=== POST /api/post-item ===");
-  console.log("Request body:", JSON.stringify(req.body, null, 2));
-
-  if (!db) {
-    console.error("Firebase DB is null!");
-    return res.status(500).json({ 
-      success: false, 
-      error: "Firebase not initialized" 
-    });
-  }
-
   try {
-    const item = req.body;
+    console.log("POST /api/post-item received");
+    console.log("Body:", req.body);
 
-    // Validate required fields
-    if (!item.name || !item.description) {
-      return res.status(400).json({ 
+    if (!db) {
+      return res.status(500).json({ 
         success: false, 
-        error: "Name and description are required" 
+        error: "Database not initialized" 
       });
     }
 
-    console.log("Attempting to save item to Firestore...");
+    const { name, description, price, category, condition, location, image, postedBy, postedByName, postedByEmail } = req.body;
 
+    // Validation
+    if (!name || !description || !postedBy) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing required fields" 
+      });
+    }
+
+    // Save to Firestore
     const docRef = await db.collection("items").add({
-      name: item.name,
-      price: item.price || 0,
-      description: item.description,
-      category: item.category || "General",
-      condition: item.condition || "Good",
-      location: item.location || "Niels Brock",
-      image: item.image || null,
-      postedBy: item.postedBy,
-      postedByName: item.postedByName || "Anonymous",
-      postedByEmail: item.postedByEmail,
+      name: String(name),
+      description: String(description),
+      price: Number(price) || 0,
+      category: String(category) || "General",
+      condition: String(condition) || "Good",
+      location: String(location) || "Niels Brock",
+      image: image ? String(image) : null,
+      postedBy: String(postedBy),
+      postedByName: String(postedByName) || "Anonymous",
+      postedByEmail: String(postedByEmail),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    console.log("✓ Item saved successfully with ID:", docRef.id);
-    res.json({ 
+    console.log("✓ Saved with ID:", docRef.id);
+
+    return res.status(200).json({ 
       success: true, 
       id: docRef.id,
       message: "Item posted successfully"
     });
 
   } catch (error) {
-    console.error("=== FIREBASE ERROR ===");
-    console.error("Error code:", error.code);
-    console.error("Error message:", error.message);
-    console.error("Full error:", error);
-    
-    res.status(500).json({ 
+    console.error("Error:", error.code, error.message);
+    return res.status(500).json({ 
       success: false, 
       error: error.message,
       code: error.code
@@ -88,8 +99,9 @@ app.post("/api/post-item", async (req, res) => {
   }
 });
 
-// ─────── REQUIRED FOR VERCEL ───────
+// ─────── 404 handler ───────
+app.use((req, res) => {
+  res.status(404).json({ success: false, error: "Route not found" });
+});
+
 module.exports = app;
-
-
-
