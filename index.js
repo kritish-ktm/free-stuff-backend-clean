@@ -1,5 +1,6 @@
 console.log("SERVER STARTING...");
-console.log("SERVICE_ACCOUNT_KEY env var exists:", !!process.env.SERVICE_ACCOUNT_KEY);const express = require("express");
+console.log("SERVICE_ACCOUNT_KEY env var exists:", !!process.env.SERVICE_ACCOUNT_KEY);
+const express = require("express");
 const cors = require("cors");
 const admin = require("firebase-admin");
 
@@ -106,4 +107,5 @@ app.use((req, res) => {
 });
 
 module.exports = app;
+
 
