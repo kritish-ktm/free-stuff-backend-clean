@@ -8,78 +8,55 @@ app.use(express.json());
 
 let db;
 
-if (process.env.SERVICE_ACCOUNT_KEY) {
-  try {
-    const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: "free-stuff-nielsbrock",
-    });
-    db = admin.firestore();
-    console.log("✓ Firebase initialized");
-  } catch (error) {
-    console.error("Firebase init error:", error.message);
+try {
+  if (!process.env.SERVICE_ACCOUNT_KEY) {
+    throw new Error("SERVICE_ACCOUNT_KEY missing");
   }
-} else {
-  console.error("Missing SERVICE_ACCOUNT_KEY");
+
+  const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY);
+  
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+  
+  db = admin.firestore();
+  db.settings({ ignoreUndefinedProperties: true });
+  
+  console.log("✓ Firebase ready");
+} catch (error) {
+  console.error("Init error:", error.message);
 }
 
 app.get("/", (req, res) => {
-  res.send("Backend alive");
-});
-
-app.get("/api/test-db", async (req, res) => {
-  if (!db) {
-    return res.json({ success: false, error: "DB not initialized" });
-  }
-
-  try {
-    const testDoc = await db.collection("test").doc("test-doc").get();
-    res.json({ 
-      success: true, 
-      message: "Connected to Firestore",
-      testDocExists: testDoc.exists,
-      testDocData: testDoc.data()
-    });
-  } catch (error) {
-    res.json({ 
-      success: false, 
-      error: error.message,
-      code: error.code
-    });
-  }
+  res.send("OK");
 });
 
 app.post("/api/post-item", async (req, res) => {
   if (!db) {
-    return res.status(500).json({ success: false, error: "Firebase not initialized" });
+    return res.status(500).json({ success: false, error: "DB not ready" });
   }
 
   try {
-    const { name, description, price, category, condition, location, image, postedBy, postedByName, postedByEmail } = req.body;
-
-    console.log("Attempting to save:", name);
-
-    const docRef = await db.collection("items").add({
-      name,
-      description,
-      price,
-      category,
-      condition,
-      location,
-      image,
-      postedBy,
-      postedByName,
-      postedByEmail,
-      createdAt: new Date().toISOString(),
+    const data = req.body;
+    
+    const result = await db.collection("items").add({
+      name: data.name || "",
+      description: data.description || "",
+      price: data.price || 0,
+      category: data.category || "",
+      condition: data.condition || "",
+      location: data.location || "",
+      image: data.image || "",
+      postedBy: data.postedBy || "",
+      postedByName: data.postedByName || "",
+      postedByEmail: data.postedByEmail || "",
+      createdAt: new Date(),
     });
 
-    console.log("✓ Saved:", docRef.id);
-    res.json({ success: true, id: docRef.id });
-
+    res.json({ success: true, id: result.id });
   } catch (error) {
-    console.error("POST Error:", error.code, "-", error.message);
-    res.status(500).json({ success: false, error: error.message, code: error.code });
+    console.error("Error:", error.message);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
