@@ -13,12 +13,15 @@ if (process.env.SERVICE_ACCOUNT_KEY) {
     const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY);
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
+      projectId: "free-stuff-nielsbrock",
     });
     db = admin.firestore();
-    console.log("Firebase initialized");
+    console.log("✓ Firebase initialized with project: free-stuff-nielsbrock");
   } catch (error) {
     console.error("Firebase init error:", error.message);
   }
+} else {
+  console.error("Missing SERVICE_ACCOUNT_KEY");
 }
 
 app.get("/", (req, res) => {
@@ -33,11 +36,9 @@ app.post("/api/post-item", async (req, res) => {
   try {
     const { name, description, price, category, condition, location, image, postedBy, postedByName, postedByEmail } = req.body;
 
-    console.log("Writing to Firestore...");
-    console.log("Name:", name);
-    console.log("Posted by:", postedBy);
+    console.log("Saving item:", name);
 
-    const docRef = await db.collection("items").doc().set({
+    const docRef = await db.collection("items").add({
       name,
       description,
       price,
@@ -51,11 +52,11 @@ app.post("/api/post-item", async (req, res) => {
       createdAt: new Date().toISOString(),
     });
 
-    console.log("Success!");
-    res.json({ success: true, message: "Item saved" });
+    console.log("✓ Item saved with ID:", docRef.id);
+    res.json({ success: true, id: docRef.id });
 
   } catch (error) {
-    console.error("ERROR:", error.code, error.message);
+    console.error("Error:", error.code, error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
