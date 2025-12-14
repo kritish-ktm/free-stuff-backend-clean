@@ -16,7 +16,7 @@ if (process.env.SERVICE_ACCOUNT_KEY) {
       projectId: "free-stuff-nielsbrock",
     });
     db = admin.firestore();
-    console.log("✓ Firebase initialized with project: free-stuff-nielsbrock");
+    console.log("✓ Firebase initialized");
   } catch (error) {
     console.error("Firebase init error:", error.message);
   }
@@ -28,6 +28,28 @@ app.get("/", (req, res) => {
   res.send("Backend alive");
 });
 
+app.get("/api/test-db", async (req, res) => {
+  if (!db) {
+    return res.json({ success: false, error: "DB not initialized" });
+  }
+
+  try {
+    const testDoc = await db.collection("test").doc("test-doc").get();
+    res.json({ 
+      success: true, 
+      message: "Connected to Firestore",
+      testDocExists: testDoc.exists,
+      testDocData: testDoc.data()
+    });
+  } catch (error) {
+    res.json({ 
+      success: false, 
+      error: error.message,
+      code: error.code
+    });
+  }
+});
+
 app.post("/api/post-item", async (req, res) => {
   if (!db) {
     return res.status(500).json({ success: false, error: "Firebase not initialized" });
@@ -36,7 +58,7 @@ app.post("/api/post-item", async (req, res) => {
   try {
     const { name, description, price, category, condition, location, image, postedBy, postedByName, postedByEmail } = req.body;
 
-    console.log("Saving item:", name);
+    console.log("Attempting to save:", name);
 
     const docRef = await db.collection("items").add({
       name,
@@ -52,12 +74,12 @@ app.post("/api/post-item", async (req, res) => {
       createdAt: new Date().toISOString(),
     });
 
-    console.log("✓ Item saved with ID:", docRef.id);
+    console.log("✓ Saved:", docRef.id);
     res.json({ success: true, id: docRef.id });
 
   } catch (error) {
-    console.error("Error:", error.code, error.message);
-    res.status(500).json({ success: false, error: error.message });
+    console.error("POST Error:", error.code, "-", error.message);
+    res.status(500).json({ success: false, error: error.message, code: error.code });
   }
 });
 
