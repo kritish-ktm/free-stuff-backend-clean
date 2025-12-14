@@ -6,7 +6,6 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// Firebase initialization
 let db;
 
 if (process.env.SERVICE_ACCOUNT_KEY) {
@@ -16,46 +15,48 @@ if (process.env.SERVICE_ACCOUNT_KEY) {
       credential: admin.credential.cert(serviceAccount),
     });
     db = admin.firestore();
-    console.log("Firebase connected successfully");
+    console.log("✓ Firebase initialized");
   } catch (error) {
-    console.error("Firebase init failed:", error.message);
+    console.error("Firebase init error:", error.message);
   }
 } else {
-  console.error("No SERVICE_ACCOUNT_KEY found");
+  console.error("Missing SERVICE_ACCOUNT_KEY");
 }
 
-// ROOT
 app.get("/", (req, res) => {
-  res.send("Free Stuff Backend is LIVE! 🚀");
+  res.send("Backend is LIVE!");
 });
 
-// TEST ENDPOINT
-app.get("/api/test", (req, res) => {
-  res.json({ 
-    success: true, 
-    message: "Test endpoint works",
-    dbReady: !!db 
-  });
-});
-
-// POST ITEM
 app.post("/api/post-item", async (req, res) => {
-  if (!db) {
-    return res.status(500).json({ success: false, error: "Firebase not initialized" });
-  }
-
   try {
-    const data = req.body;
+    if (!db) {
+      return res.status(500).json({ success: false, error: "DB not ready" });
+    }
+
+    const itemData = req.body;
+    console.log("Saving item:", itemData.name);
+
     const docRef = await db.collection("items").add({
-      ...data,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      name: itemData.name,
+      description: itemData.description,
+      price: itemData.price,
+      category: itemData.category,
+      condition: itemData.condition,
+      location: itemData.location,
+      image: itemData.image,
+      postedBy: itemData.postedBy,
+      postedByName: itemData.postedByName,
+      postedByEmail: itemData.postedByEmail,
+      createdAt: new Date().toISOString(),
     });
+
+    console.log("✓ Saved with ID:", docRef.id);
     res.json({ success: true, id: docRef.id });
+
   } catch (error) {
-    console.error("Error saving item:", error);
+    console.error("Save error:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Export for Vercel
 module.exports = app;
