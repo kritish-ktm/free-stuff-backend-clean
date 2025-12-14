@@ -17,7 +17,19 @@ app.get("/", (req, res) => {
 
 app.post("/api/post-item", async (req, res) => {
   try {
-    const { name, description, price, category, condition, location, image, postedBy, postedByName, postedByEmail } = req.body;
+    const {
+  name,
+  description,
+  price,
+  category,
+  condition,
+  location,
+  image,
+  postedby,
+  postedbyname,
+  postedbyemail
+} = req.body;
+
 
     const { data, error } = await supabase
       .from("items")
@@ -30,9 +42,9 @@ app.post("/api/post-item", async (req, res) => {
           condition,
           location,
           image,
-          postedBy,
-          postedByName,
-          postedByEmail,
+          postedby,
+          postedbyname,
+          postedbyemail,
         },
       ])
       .select();
@@ -50,3 +62,4 @@ app.post("/api/post-item", async (req, res) => {
 });
 
 module.exports = app;
+
