@@ -25,9 +25,9 @@ app.post("/api/post-item", async (req, res) => {
   condition,
   location,
   image,
-  postedby,
-  postedbyname,
-  postedbyemail
+  posted_by,
+  posted_by_name,
+  posted_by_email
 } = req.body;
 
 
@@ -42,9 +42,9 @@ app.post("/api/post-item", async (req, res) => {
           condition,
           location,
           image,
-          postedby,
-          postedbyname,
-          postedbyemail,
+          posted_by,
+          posted_by_name,
+          posted_by_email,
         },
       ])
       .select();
@@ -62,4 +62,5 @@ app.post("/api/post-item", async (req, res) => {
 });
 
 module.exports = app;
+
 
